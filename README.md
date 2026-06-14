@@ -28,8 +28,8 @@ SecureAI is a real-time monitoring system that detects AI usage, blocks access i
 ### 1. Clone the Repository
 
 ```
-git clone https://github.com/Rufaida31/SecureAI.git
-cd SecureAI/backend
+git clone https://github.com/Neharani-hub/SecureAI.git
+cd SecureAI-MinorProject/backend
 ```
 
 ---
@@ -104,7 +104,7 @@ http://127.0.0.1:5050/dashboard
 
 ## 👨‍💻 Author
 
-* Rufaida Rafiul Haq
+* Neharani Peddinti
 
 
 ---
