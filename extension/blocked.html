@@ -1,0 +1,29 @@
+// ==============================
+// SecureAI Background (FINAL)
+// ==============================
+
+// Set default values on install
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.set({
+        examMode: false
+    });
+});
+
+// Handle messages
+chrome.runtime.onMessage.addListener((msg, sender) => {
+
+    console.log("📩 Message received:", msg);
+
+    // Close tab safely
+    if (msg === "close_tab") {
+
+        // Ensure tab exists
+        if (sender.tab && sender.tab.id) {
+            chrome.tabs.remove(sender.tab.id);
+        } else {
+            console.warn("⚠️ No tab info, cannot close");
+        }
+    }
+
+    return true; // keep service worker alive
+});

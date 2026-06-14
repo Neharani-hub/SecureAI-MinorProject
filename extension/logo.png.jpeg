@@ -1,0 +1,277 @@
+// ==============================
+// SecureAI FINAL (STABLE + SAFE)
+// ==============================
+
+(function () {
+
+// 🔥 PREVENT DUPLICATE SCRIPT EXECUTION
+if (window.__secureai_loaded) {
+    console.log("⛔ Duplicate SecureAI blocked");
+    return;
+}
+window.__secureai_loaded = true;
+
+if (window !== window.top) return;
+
+console.log("✅ SecureAI Loaded");
+
+// ==========================
+// CONFIG
+// ==========================
+const BACKEND_URL = "http://127.0.0.1:5050/log";
+const SENSITIVE_URL = "http://127.0.0.1:5050/log_sensitive";
+
+let hasLoggedAccess = false;
+let isBlocked = false;
+
+let lastCapturedText = "";
+let lastSubmittedText = "";
+
+// ==========================
+// AI SITE DETECTION
+// ==========================
+function isAISite() {
+    const host = window.location.hostname;
+
+    return [
+        "chatgpt.com",
+        "openai.com",
+        "gemini.google.com",
+        "claude.ai",
+        "perplexity.ai",
+        "copilot.microsoft.com",
+        "bing.com"
+    ].some(domain => host.includes(domain));
+}
+
+// ==========================
+// SITE NAME
+// ==========================
+function getSiteName() {
+    const host = window.location.hostname;
+
+    if (host.includes("perplexity")) return "Perplexity";
+    if (host.includes("claude")) return "Claude";
+    if (host.includes("gemini")) return "Gemini";
+    if (host.includes("chatgpt") || host.includes("openai")) return "ChatGPT";
+    if (host.includes("copilot") || host.includes("bing")) return "Copilot";
+
+    return "Unknown AI";
+}
+
+// ==========================
+// TIME
+// ==========================
+function getTime() {
+    const d = new Date();
+    return d.getFullYear() + "-" +
+        String(d.getMonth()+1).padStart(2,'0') + "-" +
+        String(d.getDate()).padStart(2,'0') + " " +
+        String(d.getHours()).padStart(2,'0') + ":" +
+        String(d.getMinutes()).padStart(2,'0') + ":" +
+        String(d.getSeconds()).padStart(2,'0');
+}
+
+// ==========================
+// LOG FUNCTION (NO DUPLICATES)
+// ==========================
+function sendLog(eventType) {
+
+    // 🔥 HARD BLOCK DUPLICATE AI_ACCESS
+    if (eventType === "AI_ACCESS") {
+        if (window.__ai_access_sent) return;
+        window.__ai_access_sent = true;
+    }
+
+    let risk = eventType === "BLOCKED_ATTEMPT" ? 90 : 10;
+
+    fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            event: eventType,
+            details: getSiteName() + " | " + window.location.origin,
+            risk_score: risk,
+            timestamp: getTime()
+        })
+    }).catch(()=>{});
+}
+
+// ==========================
+// BLOCK PAGE
+// ==========================
+function blockPage() {
+    window.location.href = chrome.runtime.getURL("blocked.html");
+}
+
+// ==========================
+// MAIN LOGIC
+// ==========================
+function runSecureAI() {
+
+    if (!isAISite()) return;
+
+    chrome.storage.local.get(["examMode"], function (result) {
+
+        const examMode = result.examMode || false;
+
+        if (examMode) {
+            if (isBlocked) return;
+            isBlocked = true;
+            sendLog("BLOCKED_ATTEMPT");
+            setTimeout(blockPage, 300);
+            return;
+        }
+
+        if (!hasLoggedAccess) {
+            hasLoggedAccess = true;
+            sendLog("AI_ACCESS");
+        }
+    });
+}
+
+runSecureAI();
+
+// ==========================
+// SENSITIVE PATTERNS
+// ==========================
+const patterns = {
+    apiKey: /sk-[a-zA-Z0-9]{20,}/,
+    password: /\b(password|pass|pwd)\s*[:=]?\s*\S+/i,
+    email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
+    phone: /\b[6-9]\d{9}\b/,
+    aadhaar: /\b\d{4}\s?\d{4}\s?\d{4}\b/,
+    card: /\b(?:\d[ -]*?){13,16}\b/,
+    cvv: /\bCVV\s*[:=]?\s*\d{3,4}\b/i,
+    pan: /\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b/,
+    ifsc: /\b[A-Z]{4}0[A-Z0-9]{6}\b/
+};
+
+function detectSensitiveData(text) {
+    let detected = [];
+    for (let key in patterns) {
+        if (patterns[key].test(text)) detected.push(key);
+    }
+    return detected;
+}
+
+function calculateRiskScore(types) {
+    const sensitivity = {
+        apiKey: 50, password: 40, aadhaar: 45,
+        phone: 20, email: 15, card: 45,
+        cvv: 50, pan: 35, ifsc: 30
+    };
+
+    let score = 0;
+    types.forEach(t => score += sensitivity[t] || 10);
+
+    return Math.min(score * types.length, 100);
+}
+
+// ==========================
+// INPUT DETECTION (IMPROVED)
+// ==========================
+function getInputText() {
+
+    const active = document.activeElement;
+
+    if (active) {
+        if (active.tagName === "TEXTAREA" || active.tagName === "INPUT") return active.value;
+        if (active.isContentEditable) return active.innerText;
+    }
+
+    let el =
+        document.querySelector('textarea') ||
+        document.querySelector('[contenteditable="true"]') ||
+        document.querySelector('div[role="textbox"]') ||
+        document.querySelector('textarea[placeholder*="Ask"]');
+
+    if (el) return el.value || el.innerText || "";
+
+    return "";
+}
+
+// ==========================
+// ENTER DETECTION
+// ==========================
+document.addEventListener("keyup", function (e) {
+
+    if (!isAISite()) return;
+    if (e.key !== "Enter" || e.shiftKey) return;
+
+    handleSensitive();
+});
+
+// ==========================
+// CLICK DETECTION (PERPLEXITY)
+// ==========================
+document.addEventListener("click", function (e) {
+
+    if (!isAISite()) return;
+
+    const text = e.target.innerText || "";
+
+    if (text.includes("Ask") || text.includes("Search")) {
+        setTimeout(handleSensitive, 300);
+    }
+});
+
+// ==========================
+// HANDLE SENSITIVE
+// ==========================
+function handleSensitive() {
+
+    const text = getInputText().trim();
+    const finalText = text || lastCapturedText;
+
+    if (!finalText || finalText === lastSubmittedText) return;
+
+    lastSubmittedText = finalText;
+
+    const detected = detectSensitiveData(finalText);
+
+    if (detected.length > 0) {
+
+        fetch(SENSITIVE_URL, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                event: detected.map(d => d.toUpperCase()).join("_") + "_LEAK",
+                details: getSiteName() + " | " + finalText,
+                detected: detected.join(","),
+                risk_score: calculateRiskScore(detected),
+                timestamp: getTime()
+            })
+        }).catch(()=>{});
+    }
+
+    lastCapturedText = "";
+}
+
+// ==========================
+// LIVE TRACKING
+// ==========================
+setInterval(() => {
+    const t = getInputText().trim();
+    if (t) lastCapturedText = t;
+}, 500);
+
+// ==========================
+// SPA NAVIGATION FIX
+// ==========================
+let lastUrl = location.href;
+
+setInterval(() => {
+    if (location.href !== lastUrl) {
+        lastUrl = location.href;
+
+        hasLoggedAccess = false;
+        isBlocked = false;
+
+        window.__ai_access_sent = false; // 🔥 reset correctly
+
+        runSecureAI();
+    }
+}, 1000);
+
+})();

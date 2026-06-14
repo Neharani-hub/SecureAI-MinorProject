@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "SecureAI",
+  "version": "1.0",
+
+  "permissions": ["storage", "tabs", "activeTab", "scripting"],
+
+  "host_permissions": [
+    "http://127.0.0.1:5050/*",
+    "http://localhost:5050/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html"
+  },
+"web_accessible_resources": [
+  {
+    "resources": ["blocked.html"],
+    "matches": ["<all_urls>"]
+  }
+],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://chatgpt.com/*",
+        "*://*.openai.com/*",
+        "*://gemini.google.com/*",
+        "*://claude.ai/*",
+        "*://perplexity.ai/*",
+        "*://copilot.microsoft.com/*",
+        "*://*.bing.com/*",
+        "*://poe.com/*",
+        "*://character.ai/*",
+        "*://you.com/*",
+        "*://deepseek.com/*",
+        "*://blackbox.ai/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

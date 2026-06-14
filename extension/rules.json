@@ -1,0 +1,100 @@
+// ================= INIT =================
+document.addEventListener("DOMContentLoaded", () => {
+    chrome.storage.local.get(["password"], (data) => {
+        if (!data.password) show("setupScreen");
+        else show("loginScreen");
+    });
+});
+
+// ================= UI =================
+function show(id) {
+    ["setupScreen","loginScreen","controlScreen","changeScreen"]
+    .forEach(s => document.getElementById(s).classList.add("hidden"));
+
+    document.getElementById(id).classList.remove("hidden");
+}
+
+// ================= MENU =================
+document.getElementById("menuBtn").onclick = () => {
+    const d = document.getElementById("menuDropdown");
+    d.style.display = d.style.display === "block" ? "none" : "block";
+};
+
+// ================= SET PASSWORD =================
+document.getElementById("savePassword").onclick = () => {
+    const pass = document.getElementById("newPassword").value;
+
+    if (!pass) return alert("Enter password");
+
+    chrome.storage.local.set({ password: pass }, () => {
+        alert("Password set!");
+        show("loginScreen");
+    });
+};
+
+// ================= LOGIN =================
+document.getElementById("loginBtn").onclick = () => {
+    const input = document.getElementById("loginPassword").value;
+
+    chrome.storage.local.get(["password","examMode"], (data) => {
+        if (input !== data.password) return alert("Wrong password");
+
+        show("controlScreen");
+
+        // ✅ SHOW MENU AFTER LOGIN
+        document.getElementById("menuBtn").classList.remove("hidden");
+
+        const toggle = document.getElementById("toggleSwitch");
+        toggle.checked = data.examMode || false;
+
+        updateStatus(toggle.checked);
+    });
+};
+
+// ================= TOGGLE =================
+document.getElementById("toggleSwitch").onchange = function () {
+    chrome.storage.local.set({ examMode: this.checked });
+    updateStatus(this.checked);
+};
+
+function updateStatus(mode) {
+    document.getElementById("status").innerText =
+        mode ? "Restricted Mode ON " : "Monitoring Mode ON";
+}
+
+// ================= CHANGE PASSWORD =================
+document.getElementById("changePassBtn").onclick = () => {
+    show("changeScreen");
+};
+
+document.getElementById("updatePass").onclick = () => {
+    const oldP = document.getElementById("oldPass").value;
+    const newP = document.getElementById("newPass").value;
+
+    chrome.storage.local.get(["password"], (data) => {
+        if (oldP !== data.password) return alert("Wrong old password");
+
+        chrome.storage.local.set({ password: newP }, () => {
+            alert("Password updated!");
+            show("controlScreen");
+        });
+    });
+};
+
+// ================= REMOVE PASSWORD =================
+document.getElementById("removePassBtn").onclick = () => {
+    const confirmPass = prompt("Enter password to remove:");
+
+    chrome.storage.local.get(["password"], (data) => {
+        if (confirmPass !== data.password) return alert("Wrong password");
+
+        chrome.storage.local.remove(["password"], () => {
+            alert("Password removed!");
+
+            // Hide menu again
+            document.getElementById("menuBtn").classList.add("hidden");
+
+            show("setupScreen");
+        });
+    });
+};
