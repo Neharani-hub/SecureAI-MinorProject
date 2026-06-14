@@ -1,6 +1,6 @@
 # 🔐 SecureAI – AI Security Monitoring System
 
-SecureAI is a real-time monitoring system that detects AI usage, blocks access in restricted mode, and identifies sensitive data leaks using a Chrome Extension and Flask backend.
+SecureAI – Real-Time AI Usage Monitoring and Security Dashboard using Chrome Extension, Flask, and Risk Analytics.
 
 ---
 
