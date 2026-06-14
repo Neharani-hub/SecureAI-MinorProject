@@ -93,6 +93,14 @@ http://127.0.0.1:5050/dashboard
 * Enter sensitive data → detection triggered
 
 ---
+## Dashboard Overview
+![Dashboard](screenshots/dashboard.png)
+
+## Chrome Extension
+![Extension](screenshots/extension.png)
+
+## AI Access Detection
+![Detection](screenshots/detection.png)
 
 ## 📌 Future Improvements
 
